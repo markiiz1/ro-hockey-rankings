@@ -1,0 +1,100 @@
+// This is your Prisma schema file,
+// for more information about it, have a look at:
+// https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+model Admin {
+  id           String   @id @default(cuid())
+  robloxId     String   @unique
+  username     String
+  displayName  String
+  avatarUrl    String?
+  role         String   @default("admin") // admin or owner
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+}
+
+model Discipline {
+  id          String   @id @default(cuid())
+  name        String   @unique // e.g., "HM", "EKHL", "CBH", "RHV4", "BMHL"
+  displayName String   @default("") // full display name if different
+  description String   @default("")
+  icon        String   @default("") // emoji or icon identifier
+  order       Int      @default(0)
+  active      Boolean  @default(true)
+  tryouts     Tryout[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Player {
+  id           String              @id @default(cuid())
+  robloxId     String              @unique
+  username     String
+  displayName  String
+  avatarUrl    String?
+  tryouts      Tryout[]
+  createdAt    DateTime            @default(now())
+  updatedAt    DateTime            @updatedAt
+}
+
+model Tryout {
+  id             String     @id @default(cuid())
+  playerId       String
+  player         Player     @relation(fields: [playerId], references: [id])
+  disciplineId   String
+  discipline     Discipline @relation(fields: [disciplineId], references: [id])
+  tier           String     // The tier assigned: "1", "2", "3", "4", "5", "Unranked"
+  tierLabel      String     @default("") // Display label e.g., "Elite", "Advanced"
+  elo            Int        @default(1000)
+  notes          String     @default("")
+  reviewedBy     String     // admin robloxId
+  testerId       String?    // optional: which tester submitted this
+  tester         Tester?    @relation(fields: [testerId], references: [id])
+  date           DateTime   @default(now())
+  createdAt      DateTime   @default(now())
+  updatedAt      DateTime   @updatedAt
+
+  // Region & position (EU/NA, Field/GK)
+  region         String     @default("EU")  // EU, NA, etc.
+  position       String     @default("Field") // Field, GK
+
+  // Sub-ratings for ELO calculator (each 0-10)
+  puckHandling    Int?   // Field players
+  scoring         Int?   // Field players
+  defense         Int?   // Field players
+  passing         Int?   // Field players
+  saves           Int?   // Goalies (X/10 shots)
+  positioning     Int?   // Goalies
+  rebound         Int?   // Goalies
+  goalieDefense   Int?   // Goalies (puck handling)
+
+  @@unique([playerId, disciplineId, region, position])
+}
+
+model AdminLog {
+  id        String   @id @default(cuid())
+  adminId   String
+  action    String   // "create_tryout", "update_tryout", "delete_tryout", etc.
+  details   String   @default("")
+  createdAt DateTime @default(now())
+}
+
+model Tester {
+  id           String   @id @default(cuid())
+  robloxId     String   @unique
+  username     String
+  displayName  String
+  avatarUrl    String?
+  approved     Boolean  @default(false) // admin must approve before they can do tryouts
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  tryouts      Tryout[]
+}
